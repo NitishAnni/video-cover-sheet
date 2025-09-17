@@ -141,10 +141,10 @@ startBtn.addEventListener("click", async () => {
         await preview.play();
 
         recordedChunks = [];
-        mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9,opus" });
+        mediaRecorder = new MediaRecorder(stream);
 
         mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+            if (e.data.size > 0) recordedChunks.push(e.data);
         };
 
         mediaRecorder.onstop = () => {
@@ -221,24 +221,4 @@ uploadBtn.addEventListener("click", async () => {
     if (error) {
         console.error(error);
         status.textContent = "Upload failed. Please try again.";
-    } else {
-        const { data: downloadData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
-        status.innerHTML = `Upload complete!<br><a href="${downloadData.publicUrl}" target="_blank">View Video</a>`;
-        console.log("Video URL:", downloadData.publicUrl);
-
-        // EmailJS notification
-        emailjs.send('service_30hprhm', 'template_9kwjzrd', {
-            candidate_name: candidateName,
-            candidate_email: candidateEmail,
-            video_url: downloadData.publicUrl
-        }).then(function(response) {
-            console.log('Email sent successfully!', response.status, response.text);
-        }, function(error) {
-            console.error('Failed to send email:', error);
-        });
     }
-});
-</script>
-</div>
-</body>
-</html>
