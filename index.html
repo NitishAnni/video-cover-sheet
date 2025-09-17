@@ -6,91 +6,110 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
+      background: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 40px;
+    }
+    .container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       max-width: 600px;
+      width: 100%;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #333;
     }
     label {
-      display: block;
-      margin-top: 12px;
       font-weight: bold;
+      display: block;
+      margin-top: 15px;
     }
-    input, textarea {
+    input {
       width: 100%;
-      padding: 8px;
-      margin-top: 4px;
+      padding: 10px;
+      margin-top: 6px;
       border: 1px solid #ccc;
-      border-radius: 4px;
+      border-radius: 6px;
+      font-size: 14px;
     }
     video {
       width: 100%;
-      margin-top: 15px;
+      margin-top: 20px;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      border-radius: 4px;
+    }
+    .controls {
+      margin-top: 15px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
     }
     button {
-      margin-top: 12px;
-      padding: 10px 16px;
+      padding: 10px 18px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       background: #007BFF;
-      color: white;
+      color: #fff;
       cursor: pointer;
+      font-size: 14px;
     }
     button:disabled {
       background: #ccc;
       cursor: not-allowed;
     }
-    .video-controls {
-      display: flex;
-      gap: 10px;
-    }
     .result {
       margin-top: 20px;
-      padding: 10px;
+      padding: 15px;
       background: #f9f9f9;
       border: 1px solid #ddd;
-      border-radius: 4px;
+      border-radius: 6px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h1>Video Cover Sheet</h1>
+  <div class="container">
+    <h1>Video Cover Sheet</h1>
 
-  <!-- Form -->
-  <form id="coverForm">
+    <!-- Name & Email -->
     <label for="name">Full Name</label>
     <input type="text" id="name" required>
 
     <label for="email">Email</label>
     <input type="email" id="email" required>
 
-    <label for="q1">Why are you interested in this role?</label>
-    <textarea id="q1" rows="3" required></textarea>
+    <!-- Questions -->
+    <h2>Answer the following in your video (max 8 mins)</h2>
+    <ul>
+      <li>Why are you interested in this role?</li>
+      <li>What makes you a strong fit?</li>
+      <li>Anything else you'd like us to know?</li>
+    </ul>
 
-    <label for="q2">What makes you a strong fit?</label>
-    <textarea id="q2" rows="3" required></textarea>
+    <!-- Video Recorder -->
+    <video id="preview" autoplay playsinline muted></video>
+    <div class="controls">
+      <button id="startBtn">Start Recording</button>
+      <button id="stopBtn" disabled>Stop Recording</button>
+      <button id="uploadBtn" disabled>Upload</button>
+    </div>
 
-    <label for="q3">Anything else you'd like us to know?</label>
-    <textarea id="q3" rows="3"></textarea>
-  </form>
-
-  <!-- Video Recorder -->
-  <h2>Record Your Video</h2>
-  <video id="preview" autoplay playsinline></video>
-  <div class="video-controls">
-    <button id="startBtn">Start Recording</button>
-    <button id="stopBtn" disabled>Stop Recording</button>
-    <button id="uploadBtn" disabled>Upload</button>
+    <div id="result" class="result" style="display:none;"></div>
   </div>
-
-  <div id="result" class="result" style="display:none;"></div>
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js";
 
     // 🔹 Replace with your Supabase credentials
-    const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
-    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+    const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4d2RxbWZlZWtueHNoYnlkc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDMyNTksImV4cCI6MjA3MzcxOTI1OX0.sP8DJzwLrC4tJ8JJjVhBUKitVsXsiNFYnsj0jLdlD2U";
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const bucketName = "video_cover_sheet";
@@ -105,20 +124,33 @@
 
     // 🎥 Start recording
     startBtn.addEventListener("click", async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      preview.srcObject = stream;
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
 
-      recordedChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
+      if (!name || !email) {
+        alert("⚠️ Please enter your Name and Email before recording.");
+        return;
+      }
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) recordedChunks.push(event.data);
-      };
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        preview.srcObject = stream;
 
-      mediaRecorder.start();
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
-      uploadBtn.disabled = true;
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) recordedChunks.push(event.data);
+        };
+
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        uploadBtn.disabled = true;
+      } catch (err) {
+        console.error("Permission error:", err);
+        alert("Could not access camera/mic. Please allow permissions.");
+      }
     });
 
     // ⏹ Stop recording
@@ -135,19 +167,16 @@
     uploadBtn.addEventListener("click", async () => {
       const name = document.getElementById("name").value.trim();
       const email = document.getElementById("email").value.trim();
-      const q1 = document.getElementById("q1").value.trim();
-      const q2 = document.getElementById("q2").value.trim();
-      const q3 = document.getElementById("q3").value.trim();
 
-      if (!name || !email || !q1 || !q2) {
-        alert("⚠️ Please fill out all required fields before uploading.");
+      if (!name || !email) {
+        alert("⚠️ Please enter your Name and Email before uploading.");
         return;
       }
 
       const blob = new Blob(recordedChunks, { type: "video/webm" });
       const fileName = `${Date.now()}_${name.replace(/\s+/g, "_")}.webm`;
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .storage
         .from(bucketName)
         .upload(fileName, blob, { upsert: true });
@@ -169,12 +198,6 @@
         <p><b>✅ Upload successful!</b></p>
         <p><b>Name:</b> ${name}</p>
         <p><b>Email:</b> ${email}</p>
-        <p><b>Answers:</b></p>
-        <ul>
-          <li>${q1}</li>
-          <li>${q2}</li>
-          <li>${q3}</li>
-        </ul>
         <p><b>Video Link:</b> <a href="${publicUrlData.publicUrl}" target="_blank">View Video</a></p>
       `;
 
