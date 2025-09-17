@@ -12,7 +12,7 @@ body {
     padding: 0;
     display: flex;
     justify-content: center; /* center horizontally */
-    align-items: flex-start; /* start from top */
+    align-items: flex-start; /* top aligned */
     min-height: 100vh;
 }
 
@@ -26,7 +26,10 @@ body {
     border-radius: 10px;
 }
 
-h2 { color: #d6336c; text-align: center; }
+h2 { 
+    color: #d6336c; 
+    text-align: center; 
+}
 
 button {
     margin: 5px 5px 10px 0;
@@ -41,7 +44,10 @@ video {
     max-width: 100%;
 }
 
-.question { margin-bottom: 15px; font-weight: bold; }
+.question { 
+    margin-bottom: 15px; 
+    font-weight: bold; 
+}
 
 label {
     display: block;
@@ -123,42 +129,66 @@ const status = document.getElementById("status");
 startBtn.addEventListener("click", async () => {
     const candidateName = document.getElementById("candidateName").value.trim();
     const candidateEmail = document.getElementById("candidateEmail").value.trim();
-    if (!candidateName || !candidateEmail) { alert("Please enter both name and email."); return; }
+    if (!candidateName || !candidateEmail) { 
+        alert("Please enter both name and email."); 
+        return; 
+    }
 
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    reRecordBtn.disabled = true;
-    uploadBtn.disabled = true;
-    status.textContent = "Recording...";
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
-    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    preview.srcObject = stream;
-    preview.play();
+        preview.srcObject = stream;
+        preview.muted = true;  // avoid echo
+        await preview.play();
 
-    recordedChunks = [];
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
-    mediaRecorder.start();
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9,opus" });
 
-    // Auto stop at 8 min
-    setTimeout(() => { if(mediaRecorder.state === "recording") stopRecording(); }, 480000);
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: "video/webm" });
+            preview.srcObject = null;
+            preview.src = URL.createObjectURL(blob);
+            preview.muted = false;
+            preview.controls = true;
+
+            reRecordBtn.disabled = false;
+            uploadBtn.disabled = false;
+            status.textContent = "Recording complete. Preview your video.";
+        };
+
+        mediaRecorder.start();
+        status.textContent = "Recording...";
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        reRecordBtn.disabled = true;
+        uploadBtn.disabled = true;
+
+        // Auto stop after 8 minutes
+        setTimeout(() => { 
+            if (mediaRecorder.state === "recording") stopRecording(); 
+        }, 480000);
+
+    } catch (err) {
+        console.error("Error accessing camera/mic:", err);
+        alert("Could not access camera or microphone. Please check permissions.");
+    }
 });
 
 stopBtn.addEventListener("click", stopRecording);
 
 function stopRecording() {
-    mediaRecorder.stop();
-    stream.getTracks().forEach(track => track.stop());
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+    }
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
     stopBtn.disabled = true;
-
-    const blob = new Blob(recordedChunks, { type: "video/webm" });
-    preview.srcObject = null;
-    preview.src = URL.createObjectURL(blob);
-    preview.controls = true;
-
-    reRecordBtn.disabled = false;
-    uploadBtn.disabled = false;
-    status.textContent = "Recording complete. Preview your video.";
 }
 
 reRecordBtn.addEventListener("click", () => {
@@ -174,7 +204,10 @@ reRecordBtn.addEventListener("click", () => {
 uploadBtn.addEventListener("click", async () => {
     const candidateName = document.getElementById("candidateName").value.trim();
     const candidateEmail = document.getElementById("candidateEmail").value.trim();
-    if (!candidateName || !candidateEmail) { alert("Enter both name and email."); return; }
+    if (!candidateName || !candidateEmail) { 
+        alert("Enter both name and email."); 
+        return; 
+    }
 
     uploadBtn.disabled = true;
     reRecordBtn.disabled = true;
