@@ -1,136 +1,133 @@
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", () => {
+        // ===== Supabase Config =====
+        const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4d2RxbWZlZWtueHNoYnlkc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDMyNTksImV4cCI6MjA3MzcxOTI1OX0.sP8DJzwLrC4tJ8JJjVhBUKitVsXsiNFYnsj0jLdlD2U";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const bucketName = "video_cover_sheet";
 
-    // ===== Supabase Config =====
-    const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4d2RxbWZlZWtueHNoYnlkc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDMyNTksImV4cCI6MjA3MzcxOTI1OX0.sP8DJzwLrC4tJ8JJjVhBUKitVsXsiNFYnsj0jLdlD2U";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const bucketName = "video_cover_sheet";
+        // ===== Video Recording =====
+        let mediaRecorder;
+        let recordedChunks = [];
+        let stream;
 
-    // ===== Video Recording =====
-    let mediaRecorder;
-    let recordedChunks = [];
-    let stream;
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const reRecordBtn = document.getElementById("reRecordBtn");
+        const uploadBtn = document.getElementById("uploadBtn");
+        const preview = document.getElementById("preview");
+        const status = document.getElementById("status");
 
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const reRecordBtn = document.getElementById("reRecordBtn");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const preview = document.getElementById("preview");
-    const status = document.getElementById("status");
+        startBtn.addEventListener("click", async () => {
+            const candidateName = document.getElementById("candidateName").value.trim();
+            const candidateEmail = document.getElementById("candidateEmail").value.trim();
+            if (!candidateName || !candidateEmail) {
+                alert("Please enter both name and email.");
+                return;
+            }
 
-    startBtn.addEventListener("click", async () => {
-        const candidateName = document.getElementById("candidateName").value.trim();
-        const candidateEmail = document.getElementById("candidateEmail").value.trim();
-        if (!candidateName || !candidateEmail) { 
-            alert("Please enter both name and email."); 
-            return; 
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                preview.srcObject = stream;
+                preview.muted = true;
+                await preview.play();
+
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = e => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: "video/webm" });
+                    preview.srcObject = null;
+                    preview.src = URL.createObjectURL(blob);
+                    preview.muted = false;
+                    preview.controls = true;
+
+                    reRecordBtn.disabled = false;
+                    uploadBtn.disabled = false;
+                    status.textContent = "Recording complete. Preview your video.";
+                };
+
+                mediaRecorder.start();
+                status.textContent = "Recording...";
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                reRecordBtn.disabled = true;
+                uploadBtn.disabled = true;
+
+                // Auto stop 8 minutes
+                setTimeout(() => {
+                    if (mediaRecorder.state === "recording") stopRecording();
+                }, 480000);
+
+            } catch (err) {
+                console.error(err);
+                alert("Could not access camera or microphone. Please check permissions.");
+            }
+        });
+
+        stopBtn.addEventListener("click", stopRecording);
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+            }
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            stopBtn.disabled = true;
         }
 
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            preview.srcObject = stream;
-            preview.muted = true;
-            await preview.play();
-
+        reRecordBtn.addEventListener("click", () => {
+            preview.src = "";
             recordedChunks = [];
-            mediaRecorder = new MediaRecorder(stream);
-
-            mediaRecorder.ondataavailable = e => {
-                if (e.data.size > 0) recordedChunks.push(e.data);
-            };
-
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: "video/webm" });
-                preview.srcObject = null;
-                preview.src = URL.createObjectURL(blob);
-                preview.muted = false;
-                preview.controls = true;
-
-                reRecordBtn.disabled = false;
-                uploadBtn.disabled = false;
-                status.textContent = "Recording complete. Preview your video.";
-            };
-
-            mediaRecorder.start();
-            status.textContent = "Recording...";
-
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
             reRecordBtn.disabled = true;
             uploadBtn.disabled = true;
+            status.textContent = "Ready to re-record.";
+        });
 
-            // Auto stop 8 minutes
-            setTimeout(() => { 
-                if (mediaRecorder.state === "recording") stopRecording(); 
-            }, 480000);
+        uploadBtn.addEventListener("click", async () => {
+            const candidateName = document.getElementById("candidateName").value.trim();
+            const candidateEmail = document.getElementById("candidateEmail").value.trim();
+            if (!candidateName || !candidateEmail) {
+                alert("Enter both name and email.");
+                return;
+            }
 
-        } catch (err) {
-            console.error(err);
-            alert("Could not access camera or microphone. Please check permissions.");
-        }
+            uploadBtn.disabled = true;
+            reRecordBtn.disabled = true;
+            status.textContent = "Uploading...";
+
+            const blob = new Blob(recordedChunks, { type: "video/webm" });
+            const timestamp = Date.now();
+            const fileName = `${candidateName.replace(/\s+/g, "_")}_${timestamp}.webm`;
+
+            const { data, error } = await supabaseClient.storage.from(bucketName).upload(fileName, blob);
+
+            if (error) {
+                console.error(error);
+                status.textContent = "Upload failed. Please try again.";
+            } else {
+                const { data: downloadData } = supabaseClient.storage.from(bucketName).getPublicUrl(fileName);
+                status.innerHTML = `Upload complete!<br><a href="${downloadData.publicUrl}" target="_blank">View Video</a>`;
+                console.log("Video URL:", downloadData.publicUrl);
+
+                emailjs.send('service_30hprhm', 'template_9kwjzrd', {
+                    candidate_name: candidateName,
+                    candidate_email: candidateEmail,
+                    video_url: downloadData.publicUrl
+                }).then(function(response) {
+                    console.log('Email sent successfully!', response.status, response.text);
+                }, function(error) {
+                    console.error('Failed to send email:', error);
+                });
+            }
+        });
     });
-
-    function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-        }
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        stopBtn.disabled = true;
-        startBtn.disabled = false;
-    }
-
-    stopBtn.addEventListener("click", stopRecording);
-
-    reRecordBtn.addEventListener("click", () => {
-        preview.src = "";
-        recordedChunks = [];
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-        reRecordBtn.disabled = true;
-        uploadBtn.disabled = true;
-        status.textContent = "Ready to re-record.";
-    });
-
-    uploadBtn.addEventListener("click", async () => {
-        const candidateName = document.getElementById("candidateName").value.trim();
-        const candidateEmail = document.getElementById("candidateEmail").value.trim();
-        if (!candidateName || !candidateEmail) { 
-            alert("Enter both name and email."); 
-            return; 
-        }
-
-        uploadBtn.disabled = true;
-        reRecordBtn.disabled = true;
-        status.textContent = "Uploading...";
-
-        const blob = new Blob(recordedChunks, { type: "video/webm" });
-        const timestamp = Date.now();
-        const fileName = `${candidateName.replace(/\s+/g, "_")}_${timestamp}.webm`;
-
-        const { data, error } = await supabaseClient.storage.from(bucketName).upload(fileName, blob);
-
-        if (error) {
-            console.error(error);
-            status.textContent = "Upload failed. Please try again.";
-        } else {
-            const { data: downloadData } = supabaseClient.storage.from(bucketName).getPublicUrl(fileName);
-            status.innerHTML = `Upload complete!<br><a href="${downloadData.publicUrl}" target="_blank">View Video</a>`;
-            console.log("Video URL:", downloadData.publicUrl);
-
-            emailjs.send('service_30hprhm', 'template_9kwjzrd', {
-                candidate_name: candidateName,
-                candidate_email: candidateEmail,
-                video_url: downloadData.publicUrl
-            }).then(function(response) {
-                console.log('Email sent successfully!', response.status, response.text);
-            }, function(error) {
-                console.error('Failed to send email:', error);
-            });
-        }
-    });
-
-});
 </script>
