@@ -11,8 +11,8 @@ body {
     margin: 0;
     padding: 0;
     display: flex;
-    justify-content: center; 
-    align-items: flex-start; 
+    justify-content: center;
+    align-items: flex-start;
     min-height: 100vh;
 }
 
@@ -71,6 +71,10 @@ input {
 <script type="text/javascript">
    (function(){ emailjs.init("_rmD1hNEDk-sVx2TQ"); })();
 </script>
+
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.6.0/dist/supabase.min.js"></script>
+
 </head>
 <body>
 <div class="container">
@@ -105,12 +109,11 @@ input {
 
 <div id="status"></div>
 
-<!-- Supabase JS -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.6.0/dist/supabase.min.js"></script>
 <script>
+// ===== Supabase Config =====
 const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4d2RxbWZlZWtueHNoYnlkc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDMyNTksImV4cCI6MjA3MzcxOTI1OX0.sP8DJzwLrC4tJ8JJjVhBUKitVsXsiNFYnsj0jLdlD2U";
-const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const bucketName = "video_cover_sheet";
 
 // ===== Video Recording =====
@@ -135,7 +138,6 @@ startBtn.addEventListener("click", async () => {
 
     try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-
         preview.srcObject = stream;
         preview.muted = true;
         await preview.play();
@@ -143,7 +145,7 @@ startBtn.addEventListener("click", async () => {
         recordedChunks = [];
         mediaRecorder = new MediaRecorder(stream);
 
-        mediaRecorder.ondataavailable = (e) => {
+        mediaRecorder.ondataavailable = e => {
             if (e.data.size > 0) recordedChunks.push(e.data);
         };
 
@@ -167,13 +169,13 @@ startBtn.addEventListener("click", async () => {
         reRecordBtn.disabled = true;
         uploadBtn.disabled = true;
 
-        // Auto stop after 8 minutes
+        // Auto stop 8 minutes
         setTimeout(() => { 
             if (mediaRecorder.state === "recording") stopRecording(); 
         }, 480000);
 
     } catch (err) {
-        console.error("Error accessing camera/mic:", err);
+        console.error(err);
         alert("Could not access camera or microphone. Please check permissions.");
     }
 });
@@ -216,9 +218,28 @@ uploadBtn.addEventListener("click", async () => {
     const timestamp = Date.now();
     const fileName = `${candidateName.replace(/\s+/g, "_")}_${timestamp}.webm`;
 
-    const { data, error } = await supabase.storage.from(bucketName).upload(fileName, blob);
+    const { data, error } = await supabaseClient.storage.from(bucketName).upload(fileName, blob);
 
     if (error) {
         console.error(error);
         status.textContent = "Upload failed. Please try again.";
+    } else {
+        const { data: downloadData } = supabaseClient.storage.from(bucketName).getPublicUrl(fileName);
+        status.innerHTML = `Upload complete!<br><a href="${downloadData.publicUrl}" target="_blank">View Video</a>`;
+        console.log("Video URL:", downloadData.publicUrl);
+
+        emailjs.send('service_30hprhm', 'template_9kwjzrd', {
+            candidate_name: candidateName,
+            candidate_email: candidateEmail,
+            video_url: downloadData.publicUrl
+        }).then(function(response) {
+            console.log('Email sent successfully!', response.status, response.text);
+        }, function(error) {
+            console.error('Failed to send email:', error);
+        });
     }
+});
+</script>
+</div>
+</body>
+</html>
