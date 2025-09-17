@@ -2,16 +2,88 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Video Cover Sheet Upload</title>
+  <title>Video Cover Sheet</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      max-width: 600px;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    video {
+      width: 100%;
+      margin-top: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      margin-top: 12px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      background: #007BFF;
+      color: white;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .video-controls {
+      display: flex;
+      gap: 10px;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Video Cover Sheet Upload</h1>
+  <h1>Video Cover Sheet</h1>
 
+  <!-- Form -->
+  <form id="coverForm">
+    <label for="name">Full Name</label>
+    <input type="text" id="name" required>
+
+    <label for="email">Email</label>
+    <input type="email" id="email" required>
+
+    <label for="q1">Why are you interested in this role?</label>
+    <textarea id="q1" rows="3" required></textarea>
+
+    <label for="q2">What makes you a strong fit?</label>
+    <textarea id="q2" rows="3" required></textarea>
+
+    <label for="q3">Anything else you'd like us to know?</label>
+    <textarea id="q3" rows="3"></textarea>
+  </form>
+
+  <!-- Video Recorder -->
+  <h2>Record Your Video</h2>
   <video id="preview" autoplay playsinline></video>
-  <br>
-  <button id="startBtn">Start Recording</button>
-  <button id="stopBtn" disabled>Stop Recording</button>
-  <button id="uploadBtn" disabled>Upload</button>
+  <div class="video-controls">
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+    <button id="uploadBtn" disabled>Upload</button>
+  </div>
+
+  <div id="result" class="result" style="display:none;"></div>
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js";
@@ -29,6 +101,7 @@
     const stopBtn = document.getElementById("stopBtn");
     const uploadBtn = document.getElementById("uploadBtn");
     const preview = document.getElementById("preview");
+    const resultBox = document.getElementById("result");
 
     // 🎥 Start recording
     startBtn.addEventListener("click", async () => {
@@ -39,9 +112,7 @@
       mediaRecorder = new MediaRecorder(stream);
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunks.push(event.data);
-        }
+        if (event.data.size > 0) recordedChunks.push(event.data);
       };
 
       mediaRecorder.start();
@@ -62,8 +133,19 @@
 
     // ⬆ Upload to Supabase
     uploadBtn.addEventListener("click", async () => {
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const q1 = document.getElementById("q1").value.trim();
+      const q2 = document.getElementById("q2").value.trim();
+      const q3 = document.getElementById("q3").value.trim();
+
+      if (!name || !email || !q1 || !q2) {
+        alert("⚠️ Please fill out all required fields before uploading.");
+        return;
+      }
+
       const blob = new Blob(recordedChunks, { type: "video/webm" });
-      const fileName = `video_${Date.now()}.webm`;
+      const fileName = `${Date.now()}_${name.replace(/\s+/g, "_")}.webm`;
 
       const { data, error } = await supabase
         .storage
@@ -71,7 +153,7 @@
         .upload(fileName, blob, { upsert: true });
 
       if (error) {
-        console.error("Upload failed:", error.message, error);
+        console.error("Upload failed:", error.message);
         alert("❌ Upload failed: " + error.message);
         return;
       }
@@ -82,10 +164,20 @@
         .from(bucketName)
         .getPublicUrl(fileName);
 
-      console.log("Upload success:", data);
-      console.log("Public URL:", publicUrlData.publicUrl);
+      resultBox.style.display = "block";
+      resultBox.innerHTML = `
+        <p><b>✅ Upload successful!</b></p>
+        <p><b>Name:</b> ${name}</p>
+        <p><b>Email:</b> ${email}</p>
+        <p><b>Answers:</b></p>
+        <ul>
+          <li>${q1}</li>
+          <li>${q2}</li>
+          <li>${q3}</li>
+        </ul>
+        <p><b>Video Link:</b> <a href="${publicUrlData.publicUrl}" target="_blank">View Video</a></p>
+      `;
 
-      alert("✅ Upload successful!\n\nVideo link: " + publicUrlData.publicUrl);
       uploadBtn.disabled = true;
     });
   </script>
