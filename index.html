@@ -1,208 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Video Cover Sheet</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f9;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      margin: 0;
-      padding: 40px;
-    }
-    .container {
-      background: #fff;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      max-width: 600px;
-      width: 100%;
-    }
-    h1, h2 {
-      text-align: center;
-      color: #333;
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 15px;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 6px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-    video {
-      width: 100%;
-      margin-top: 20px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    .controls {
-      margin-top: 15px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-    button {
-      padding: 10px 18px;
-      border: none;
-      border-radius: 6px;
-      background: #007BFF;
-      color: #fff;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-    .result {
-      margin-top: 20px;
-      padding: 15px;
-      background: #f9f9f9;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Candidate Video Submission</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f7f7f7;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center; 
+    align-items: flex-start; 
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 800px;
+    width: 95%;
+    background-color: #fff;
+    padding: 30px;
+    margin: 30px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 10px;
+}
+
+h2 { 
+    color: #d6336c; 
+    text-align: center; 
+}
+
+button {
+    margin: 5px 5px 10px 0;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+video {
+    display: block;
+    margin: 10px 0;
+    max-width: 100%;
+}
+
+.question { 
+    margin-bottom: 15px; 
+    font-weight: bold; 
+}
+
+label {
+    display: block;
+    margin: 10px 0;
+    font-weight: 500;
+}
+
+input {
+    width: 100%;
+    padding: 8px;
+    font-size: 16px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+</style>
+
+<!-- EmailJS -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script type="text/javascript">
+   (function(){ emailjs.init("_rmD1hNEDk-sVx2TQ"); })();
+</script>
 </head>
 <body>
-  <div class="container">
-    <h1>Video Cover Sheet</h1>
+<div class="container">
+<h2>Candidate Video Submission</h2>
 
-    <!-- Name & Email -->
-    <label for="name">Full Name</label>
-    <input type="text" id="name" required>
+<div class="questions">
+    <div class="question">1. Introduce yourself.</div>
+    <div class="question">2. Why are you interested in this role?</div>
+    <div class="question">3. What are your key skills relevant to this job?</div>
+    <div class="question">4. Any final message to us?</div>
+</div>
 
-    <label for="email">Email</label>
-    <input type="email" id="email" required>
+<label>Name:
+    <input type="text" id="candidateName" placeholder="Enter your full name">
+</label>
 
-    <!-- Questions -->
-    <h2>Answer the following in your video (max 8 mins)</h2>
-    <ul>
-      <li>Why are you interested in this role?</li>
-      <li>What makes you a strong fit?</li>
-      <li>Anything else you'd like us to know?</li>
-    </ul>
+<label>Email:
+    <input type="email" id="candidateEmail" placeholder="Enter your email address">
+</label>
 
-    <!-- Video Recorder -->
-    <video id="preview" autoplay playsinline muted></video>
-    <div class="controls">
-      <button id="startBtn">Start Recording</button>
-      <button id="stopBtn" disabled>Stop Recording</button>
-      <button id="uploadBtn" disabled>Upload</button>
-    </div>
+<div>
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+</div>
 
-    <div id="result" class="result" style="display:none;"></div>
-  </div>
+<video id="preview" controls></video>
 
-  <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js";
+<div>
+    <button id="reRecordBtn" disabled>Re-record</button>
+    <button id="uploadBtn" disabled>Proceed & Upload</button>
+</div>
 
-    // 🔹 Replace with your Supabase credentials
-    const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4d2RxbWZlZWtueHNoYnlkc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDMyNTksImV4cCI6MjA3MzcxOTI1OX0.sP8DJzwLrC4tJ8JJjVhBUKitVsXsiNFYnsj0jLdlD2U";
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<div id="status"></div>
 
-    const bucketName = "video_cover_sheet";
-    let mediaRecorder;
-    let recordedChunks = [];
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.6.0/dist/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4d2RxbWZlZWtueHNoYnlkc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDMyNTksImV4cCI6MjA3MzcxOTI1OX0.sP8DJzwLrC4tJ8JJjVhBUKitVsXsiNFYnsj0jLdlD2U";
+const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const bucketName = "video_cover_sheet";
 
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const preview = document.getElementById("preview");
-    const resultBox = document.getElementById("result");
+// ===== Video Recording =====
+let mediaRecorder;
+let recordedChunks = [];
+let stream;
 
-    // 🎥 Start recording
-    startBtn.addEventListener("click", async () => {
-      const name = document.getElementById("name").value.trim();
-      const email = document.getElementById("email").value.trim();
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const reRecordBtn = document.getElementById("reRecordBtn");
+const uploadBtn = document.getElementById("uploadBtn");
+const preview = document.getElementById("preview");
+const status = document.getElementById("status");
 
-      if (!name || !email) {
-        alert("⚠️ Please enter your Name and Email before recording.");
-        return;
-      }
+startBtn.addEventListener("click", async () => {
+    const candidateName = document.getElementById("candidateName").value.trim();
+    const candidateEmail = document.getElementById("candidateEmail").value.trim();
+    if (!candidateName || !candidateEmail) { 
+        alert("Please enter both name and email."); 
+        return; 
+    }
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
         preview.srcObject = stream;
+        preview.muted = true;
+        await preview.play();
 
         recordedChunks = [];
-        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9,opus" });
 
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) recordedChunks.push(event.data);
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: "video/webm" });
+            preview.srcObject = null;
+            preview.src = URL.createObjectURL(blob);
+            preview.muted = false;
+            preview.controls = true;
+
+            reRecordBtn.disabled = false;
+            uploadBtn.disabled = false;
+            status.textContent = "Recording complete. Preview your video.";
         };
 
         mediaRecorder.start();
+        status.textContent = "Recording...";
+
         startBtn.disabled = true;
         stopBtn.disabled = false;
+        reRecordBtn.disabled = true;
         uploadBtn.disabled = true;
-      } catch (err) {
-        console.error("Permission error:", err);
-        alert("Could not access camera/mic. Please allow permissions.");
-      }
-    });
 
-    // ⏹ Stop recording
-    stopBtn.addEventListener("click", () => {
-      mediaRecorder.stop();
-      preview.srcObject.getTracks().forEach(track => track.stop());
+        // Auto stop after 8 minutes
+        setTimeout(() => { 
+            if (mediaRecorder.state === "recording") stopRecording(); 
+        }, 480000);
 
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-      uploadBtn.disabled = false;
-    });
+    } catch (err) {
+        console.error("Error accessing camera/mic:", err);
+        alert("Could not access camera or microphone. Please check permissions.");
+    }
+});
 
-    // ⬆ Upload to Supabase
-    uploadBtn.addEventListener("click", async () => {
-      const name = document.getElementById("name").value.trim();
-      const email = document.getElementById("email").value.trim();
+stopBtn.addEventListener("click", stopRecording);
 
-      if (!name || !email) {
-        alert("⚠️ Please enter your Name and Email before uploading.");
-        return;
-      }
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+    }
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+    stopBtn.disabled = true;
+}
 
-      const blob = new Blob(recordedChunks, { type: "video/webm" });
-      const fileName = `${Date.now()}_${name.replace(/\s+/g, "_")}.webm`;
+reRecordBtn.addEventListener("click", () => {
+    preview.src = "";
+    recordedChunks = [];
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    reRecordBtn.disabled = true;
+    uploadBtn.disabled = true;
+    status.textContent = "Ready to re-record.";
+});
 
-      const { error } = await supabase
-        .storage
-        .from(bucketName)
-        .upload(fileName, blob, { upsert: true });
+uploadBtn.addEventListener("click", async () => {
+    const candidateName = document.getElementById("candidateName").value.trim();
+    const candidateEmail = document.getElementById("candidateEmail").value.trim();
+    if (!candidateName || !candidateEmail) { 
+        alert("Enter both name and email."); 
+        return; 
+    }
 
-      if (error) {
-        console.error("Upload failed:", error.message);
-        alert("❌ Upload failed: " + error.message);
-        return;
-      }
+    uploadBtn.disabled = true;
+    reRecordBtn.disabled = true;
+    status.textContent = "Uploading...";
 
-      // ✅ Get public URL
-      const { data: publicUrlData } = supabase
-        .storage
-        .from(bucketName)
-        .getPublicUrl(fileName);
+    const blob = new Blob(recordedChunks, { type: "video/webm" });
+    const timestamp = Date.now();
+    const fileName = `${candidateName.replace(/\s+/g, "_")}_${timestamp}.webm`;
 
-      resultBox.style.display = "block";
-      resultBox.innerHTML = `
-        <p><b>✅ Upload successful!</b></p>
-        <p><b>Name:</b> ${name}</p>
-        <p><b>Email:</b> ${email}</p>
-        <p><b>Video Link:</b> <a href="${publicUrlData.publicUrl}" target="_blank">View Video</a></p>
-      `;
+    const { data, error } = await supabase.storage.from(bucketName).upload(fileName, blob);
 
-      uploadBtn.disabled = true;
-    });
-  </script>
+    if (error) {
+        console.error(error);
+        status.textContent = "Upload failed. Please try again.";
+    } else {
+        const { data: downloadData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
+        status.innerHTML = `Upload complete!<br><a href="${downloadData.publicUrl}" target="_blank">View Video</a>`;
+        console.log("Video URL:", downloadData.publicUrl);
+
+        // EmailJS notification
+        emailjs.send('service_30hprhm', 'template_9kwjzrd', {
+            candidate_name: candidateName,
+            candidate_email: candidateEmail,
+            video_url: downloadData.publicUrl
+        }).then(function(response) {
+            console.log('Email sent successfully!', response.status, response.text);
+        }, function(error) {
+            console.error('Failed to send email:', error);
+        });
+    }
+});
+</script>
+</div>
 </body>
 </html>
