@@ -67,9 +67,9 @@ input {
 </style>
 
 <!-- EmailJS -->
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-<script type="text/javascript">
-   (function(){ emailjs.init("_rmD1hNEDk-sVx2TQ"); })();
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+(function(){ emailjs.init("_rmD1hNEDk-sVx2TQ"); })();
 </script>
 
 <!-- Supabase JS -->
@@ -110,13 +110,13 @@ input {
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+
     // ===== Supabase Config =====
     const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4d2RxbWZlZWtueHNoYnlkc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDMyNTksImV4cCI6MjA3MzcxOTI1OX0.sP8DJzwLrC4tJ8JJjVhBUKitVsXsiNFYnsj0jLdlD2U";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const bucketName = "video_cover_sheet";
 
-    // ===== Video Recording =====
     let mediaRecorder;
     let recordedChunks = [];
     let stream;
@@ -129,121 +129,95 @@ document.addEventListener("DOMContentLoaded", () => {
     const status = document.getElementById("status");
 
     startBtn.addEventListener("click", async () => {
-        const candidateName = document.getElementById("candidateName").value.trim();
-        const candidateEmail = document.getElementById("candidateEmail").value.trim();
-        if (!candidateName || !candidateEmail) { 
-            alert("Please enter both name and email."); 
-            return; 
-        }
+        const name = document.getElementById("candidateName").value.trim();
+        const email = document.getElementById("candidateEmail").value.trim();
+        if(!name || !email){ alert("Please enter name and email."); return; }
 
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            stream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
             preview.srcObject = stream;
             preview.muted = true;
             await preview.play();
 
             recordedChunks = [];
             mediaRecorder = new MediaRecorder(stream);
-
-            mediaRecorder.ondataavailable = e => {
-                if (e.data.size > 0) recordedChunks.push(e.data);
-            };
-
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: "video/webm" });
+            mediaRecorder.ondataavailable = e => { if(e.data.size>0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = ()=>{
+                const blob = new Blob(recordedChunks,{type:"video/webm"});
                 preview.srcObject = null;
                 preview.src = URL.createObjectURL(blob);
                 preview.muted = false;
                 preview.controls = true;
-
                 reRecordBtn.disabled = false;
                 uploadBtn.disabled = false;
-                status.textContent = "Recording complete. Preview your video.";
+                status.textContent="Recording complete. Preview your video.";
             };
 
             mediaRecorder.start();
-            status.textContent = "Recording...";
+            status.textContent="Recording...";
+            startBtn.disabled=true;
+            stopBtn.disabled=false;
+            reRecordBtn.disabled=true;
+            uploadBtn.disabled=true;
 
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
-            reRecordBtn.disabled = true;
-            uploadBtn.disabled = true;
+            setTimeout(()=>{ if(mediaRecorder.state==="recording") stopRecording(); },480000);
 
-            // Auto stop 8 minutes
-            setTimeout(() => { 
-                if (mediaRecorder.state === "recording") stopRecording(); 
-            }, 480000);
-
-        } catch (err) {
+        } catch(err){
             console.error(err);
-            alert("Could not access camera or microphone. Please check permissions.");
+            alert("Cannot access camera/microphone. Check permissions and HTTPS.");
         }
     });
 
-    function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-        }
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        stopBtn.disabled = true;
-        startBtn.disabled = false;
+    function stopRecording(){
+        if(mediaRecorder && mediaRecorder.state==="recording") mediaRecorder.stop();
+        if(stream) stream.getTracks().forEach(track=>track.stop());
+        stopBtn.disabled=true;
+        startBtn.disabled=false;
     }
 
     stopBtn.addEventListener("click", stopRecording);
 
-    reRecordBtn.addEventListener("click", () => {
-        preview.src = "";
-        recordedChunks = [];
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-        reRecordBtn.disabled = true;
-        uploadBtn.disabled = true;
-        status.textContent = "Ready to re-record.";
+    reRecordBtn.addEventListener("click", ()=>{
+        preview.src="";
+        recordedChunks=[];
+        startBtn.disabled=false;
+        stopBtn.disabled=true;
+        reRecordBtn.disabled=true;
+        uploadBtn.disabled=true;
+        status.textContent="Ready to re-record.";
     });
 
-    uploadBtn.addEventListener("click", async () => {
-        const candidateName = document.getElementById("candidateName").value.trim();
-        const candidateEmail = document.getElementById("candidateEmail").value.trim();
-        if (!candidateName || !candidateEmail) { 
-            alert("Enter both name and email."); 
-            return; 
-        }
+    uploadBtn.addEventListener("click", async ()=>{
+        const name = document.getElementById("candidateName").value.trim();
+        const email = document.getElementById("candidateEmail").value.trim();
+        if(!name || !email){ alert("Enter both name and email."); return; }
 
-        uploadBtn.disabled = true;
-        reRecordBtn.disabled = true;
-        status.textContent = "Uploading...";
+        uploadBtn.disabled=true;
+        reRecordBtn.disabled=true;
+        status.textContent="Uploading...";
 
-        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        const blob = new Blob(recordedChunks,{type:"video/webm"});
         const timestamp = Date.now();
-        const fileName = `${candidateName.replace(/\s+/g, "_")}_${timestamp}.webm`;
+        const fileName = `${name.replace(/\s+/g,"_")}_${timestamp}.webm`;
 
-        const { data, error } = await supabaseClient.storage.from(bucketName).upload(fileName, blob);
-
-        if (error) {
-            console.error(error);
-            status.textContent = "Upload failed. Please try again.";
+        const {data, error} = await supabase.storage.from(bucketName).upload(fileName, blob);
+        if(error){ 
+            console.error(error); 
+            status.textContent="Upload failed. Try again.";
         } else {
-            const { data: downloadData } = supabaseClient.storage.from(bucketName).getPublicUrl(fileName);
-            status.innerHTML = `Upload complete!<br><a href="${downloadData.publicUrl}" target="_blank">View Video</a>`;
-            console.log("Video URL:", downloadData.publicUrl);
+            const {data: downloadData} = supabase.storage.from(bucketName).getPublicUrl(fileName);
+            status.innerHTML=`Upload complete!<br><a href="${downloadData.publicUrl}" target="_blank">View Video</a>`;
 
-            emailjs.send('service_30hprhm', 'template_9kwjzrd', {
-                candidate_name: candidateName,
-                candidate_email: candidateEmail,
+            emailjs.send('service_30hprhm','template_9kwjzrd',{
+                candidate_name: name,
+                candidate_email: email,
                 video_url: downloadData.publicUrl
-            }).then(function(response) {
-                console.log('Email sent successfully!', response.status, response.text);
-            }, function(error) {
-                console.error('Failed to send email:', error);
-            });
+            }).then(r=>console.log("Email sent!",r)).catch(e=>console.error(e));
         }
     });
 
 });
 </script>
-
 </div>
 </body>
 </html>
