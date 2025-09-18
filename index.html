@@ -2,191 +2,188 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Video Cover Sheet</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
+      justify-content: flex-start;
       min-height: 100vh;
-      background: #f5f5f5;
       margin: 0;
+      padding: 20px;
+      background: #f4f4f4;
     }
     .container {
       background: #fff;
       padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      max-width: 700px;
+      border-radius: 12px;
+      max-width: 600px;
       width: 100%;
-    }
-    h2 { text-align: center; }
-    label { font-weight: bold; display: block; margin-top: 10px; }
-    input, textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      text-align: center;
     }
     video {
       width: 100%;
+      max-width: 500px;
       margin-top: 15px;
-      border-radius: 10px;
-      background: #000;
-    }
-    .buttons {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 15px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
     }
     button {
+      margin: 10px;
       padding: 10px 20px;
       border: none;
-      border-radius: 5px;
-      background: #007BFF;
-      color: #fff;
+      border-radius: 8px;
       cursor: pointer;
+      font-size: 16px;
+      background-color: #007bff;
+      color: #fff;
+      transition: background 0.3s;
     }
-    button:disabled {
-      background: #aaa;
-      cursor: not-allowed;
+    button:hover {
+      background-color: #0056b3;
+    }
+    .hidden {
+      display: none;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 20px;
+      z-index: 1000;
+      display: none;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Video Cover Sheet</h2>
+    <p>Please record your response (max 8 minutes).</p>
+    <input type="text" id="name" placeholder="Enter your name" required />
+    <input type="email" id="email" placeholder="Enter your email" required />
 
-    <label for="name">Full Name</label>
-    <input type="text" id="name" placeholder="Enter your name"/>
-
-    <label for="email">Email</label>
-    <input type="email" id="email" placeholder="Enter your email"/>
-
-    <label>Question 1: Tell us about yourself</label>
-    <label>Question 2: Why are you applying for this role?</label>
-    <label>Question 3: What makes you a good fit?</label>
-
-    <video id="video" autoplay muted></video>
-
-    <div class="buttons">
+    <div>
       <button id="startBtn">Start Recording</button>
-      <button id="stopBtn" disabled>Stop Recording</button>
-      <button id="reRecordBtn" disabled>Re-record</button>
+      <button id="stopBtn" class="hidden">Stop Recording</button>
+      <button id="uploadBtn" class="hidden">Upload</button>
+      <button id="retryBtn" class="hidden">Re-record</button>
     </div>
+
+    <video id="preview" controls class="hidden"></video>
+    <p id="status"></p>
   </div>
 
-  <!-- Supabase and EmailJS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.6.0/dist/umd/supabase.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+  <div id="loading" class="loading-overlay">
+    Uploading your video, please wait...
+  </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    window.onload = () => {
-      // Initialize Supabase
+    document.addEventListener("DOMContentLoaded", () => {
       const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4d2RxbWZlZWtueHNoYnlkc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDMyNTksImV4cCI6MjA3MzcxOTI1OX0.sP8DJzwLrC4tJ8JJjVhBUKitVsXsiNFYnsj0jLdlD2U";
-      const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      // Initialize EmailJS
-      emailjs.init("_rmD1hNEDk-sVx2TQ");
-
-      const startBtn = document.getElementById("startBtn");
-      const stopBtn = document.getElementById("stopBtn");
-      const reRecordBtn = document.getElementById("reRecordBtn");
-      const video = document.getElementById("video");
-      const nameInput = document.getElementById("name");
-      const emailInput = document.getElementById("email");
+      const SUPABASE_ANON_KEY = "YOUR_ANON_KEY"; // replace with your anon key
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const bucketName = "video_cover_sheet";
 
       let mediaRecorder;
       let recordedChunks = [];
-      let stream;
 
-      async function initCamera() {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          video.srcObject = stream;
-        } catch (err) {
-          alert("Camera/Mic access denied: " + err.message);
-        }
-      }
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const retryBtn = document.getElementById("retryBtn");
+      const preview = document.getElementById("preview");
+      const status = document.getElementById("status");
+      const loading = document.getElementById("loading");
 
-      async function startRecording() {
-        if (!nameInput.value || !emailInput.value) {
+      startBtn.addEventListener("click", async () => {
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim();
+        if (!name || !email) {
           alert("Please enter your name and email before recording.");
           return;
         }
-        if (!stream) await initCamera();
 
-        recordedChunks = [];
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-        mediaRecorder.onstop = uploadRecording;
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: "video/webm" });
+          preview.src = URL.createObjectURL(blob);
+          preview.classList.remove("hidden");
+          uploadBtn.classList.remove("hidden");
+          retryBtn.classList.remove("hidden");
+        };
 
         mediaRecorder.start();
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        reRecordBtn.disabled = true;
-      }
+        status.textContent = "Recording in progress...";
+        startBtn.classList.add("hidden");
+        stopBtn.classList.remove("hidden");
 
-      function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-          stopBtn.disabled = true;
-        }
-      }
+        setTimeout(() => {
+          if (mediaRecorder && mediaRecorder.state === "recording") {
+            stopBtn.click();
+          }
+        }, 480000); // auto stop after 8 minutes
+      });
 
-      async function uploadRecording() {
+      stopBtn.addEventListener("click", () => {
+        mediaRecorder.stop();
+        status.textContent = "Recording stopped. Review your video below.";
+        stopBtn.classList.add("hidden");
+      });
+
+      retryBtn.addEventListener("click", () => {
+        preview.src = "";
+        preview.classList.add("hidden");
+        uploadBtn.classList.add("hidden");
+        retryBtn.classList.add("hidden");
+        startBtn.classList.remove("hidden");
+        status.textContent = "";
+      });
+
+      uploadBtn.addEventListener("click", async () => {
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim();
         const blob = new Blob(recordedChunks, { type: "video/webm" });
-        const fileName = `${Date.now()}_${nameInput.value.replace(/\s+/g,"_")}.webm`;
 
-        const { data, error } = await supabaseClient.storage
-          .from("video_cover_sheet")
-          .upload(fileName, blob, { contentType: "video/webm" });
+        const fileName = `${name}_${Date.now()}.webm`;
+
+        loading.style.display = "flex";
+        status.textContent = "";
+
+        let { data, error } = await supabase.storage.from(bucketName).upload(fileName, blob);
+
+        loading.style.display = "none";
 
         if (error) {
-          alert("Upload failed: " + error.message);
+          status.textContent = "Upload failed. Please try again.";
           console.error(error);
-          return;
+        } else {
+          status.textContent = "Upload successful!";
+          uploadBtn.classList.add("hidden");
+          retryBtn.classList.add("hidden");
         }
-
-        const { data: publicData } = supabaseClient.storage
-          .from("video_cover_sheet")
-          .getPublicUrl(fileName);
-
-        const publicUrl = publicData.publicUrl;
-        console.log("Uploaded video URL:", publicUrl);
-
-        // Send Email
-        emailjs.send("service_30hprhm", "template_9kwjzrd", {
-          from_name: nameInput.value,
-          from_email: emailInput.value,
-          message: "New video submitted",
-          video_url: publicUrl
-        }).then(() => {
-          alert("Recording uploaded and email sent successfully!");
-        }).catch(err => {
-          alert("Email send failed: " + err.message);
-        });
-
-        reRecordBtn.disabled = false;
-      }
-
-      function reRecord() {
-        startBtn.disabled = false;
-        reRecordBtn.disabled = true;
-      }
-
-      startBtn.addEventListener("click", startRecording);
-      stopBtn.addEventListener("click", stopRecording);
-      reRecordBtn.addEventListener("click", reRecord);
-
-      // Initialize camera preview
-      initCamera();
-    };
+      });
+    });
   </script>
 </body>
 </html>
