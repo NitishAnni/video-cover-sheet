@@ -43,6 +43,7 @@
       margin-top: 15px;
       border-radius: 6px;
       background: black;
+      display: none; /* Add this to hide video preview initially */
     }
     button {
       margin: 8px 5px 0 0;
@@ -60,12 +61,13 @@
 
     /* Loading modal */
     #loadingModal {
-      display: none;
+      display: none; /* Correctly hides the modal initially */
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.5);
-      display: flex; justify-content: center; align-items: center;
+      justify-content: center;
+      align-items: center;
     }
     #loadingBox {
       background: white;
@@ -117,12 +119,10 @@
     <p id="status"></p>
   </div>
 
-  <!-- Loading Modal -->
   <div id="loadingModal">
     <div id="loadingBox">Uploading video, please wait...</div>
   </div>
 
-  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     const { createClient } = supabase;
@@ -161,16 +161,14 @@
       mediaRecorder.stop();
       stream.getTracks().forEach(track => track.stop());
 
-      preview.style.display = "none"; // Hide live preview after recording
-
       stopBtn.style.display = "none";
       afterRecording.style.display = "block";
-      status.textContent = "Recording stopped. You can upload your video.";
+      status.textContent = "Recording stopped. You can re-record or upload your video.";
     };
 
     reRecordBtn.onclick = () => {
       afterRecording.style.display = "none";
-      preview.style.display = "block";
+      preview.style.display = "none";
       startBtn.style.display = "inline-block";
       status.textContent = "You can re-record now.";
     };
@@ -187,7 +185,7 @@
       const fileName = `${firstName}_${lastName}_${Date.now()}.webm`;
 
       loadingModal.style.display = "flex";
-      status.textContent = "";
+      status.textContent = "Uploading...";
 
       const { error } = await supabaseClient.storage
         .from("video_cover_sheet") // Supabase bucket
@@ -201,6 +199,8 @@
       } else {
         status.textContent = "✅ Video uploaded successfully!";
         afterRecording.style.display = "none";
+        // To allow re-recording after a successful upload
+        startBtn.style.display = "inline-block";
       }
     };
   </script>
