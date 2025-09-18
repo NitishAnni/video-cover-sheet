@@ -43,7 +43,7 @@
       margin-top: 15px;
       border-radius: 6px;
       background: black;
-      display: none; /* Add this to hide video preview initially */
+      display: none;
     }
     button {
       margin: 8px 5px 0 0;
@@ -61,7 +61,7 @@
 
     /* Loading modal */
     #loadingModal {
-      display: none; /* Correctly hides the modal initially */
+      display: none;
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
@@ -79,8 +79,10 @@
     }
 
     input {
-      width: calc(50% - 10px);
-      margin: 5px;
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 5px;
+      margin-bottom: 10px;
       padding: 8px;
       font-size: 14px;
       border-radius: 6px;
@@ -95,14 +97,14 @@
       ⚠️ Recording must be <b>5–7 minutes</b> only. Please answer all the questions below.
     </div>
     <ol>
-      <li>This role requires onsite presence... Are you comfortable? If out-of-state, willing to relocate?</li>
-      <li>Describe your experience in category management (sourcing + stakeholder mgmt).</li>
-      <li>What is the size of spend you managed? Years of exp in categories? Specialized or multiple?</li>
-      <li>Describe your leadership & people management experience (teams/functions led).</li>
+      <li>This role requires onsite presence on an as-needed basis, which could be three days a week or more. If you're a local candidate, please let us know if you're comfortable with this arrangement and tell us why? If you are from out-of-state, are you willing to relocate and tell us why?</li>
+      <li>Please describe your experience in category management, focusing on two key areas: (1) full-cycle or multi-step sourcing, and (2) stakeholder management.</li>
+      <li>What is the size of the spend you have managed, and how many years of experience do you have in specific categories? Have you specialized in a single category, or have you worked across multiple categories. We're particularly interested in candidates with deep expertise in focused categories. Please explain your answer in detail.</li>
+      <li>Please describe your experience in leadership and people management. What teams or functions have you led, and what was the scope of your responsibility?</li>
     </ol>
 
-    <input type="text" id="firstName" placeholder="First Name">
-    <input type="text" id="lastName" placeholder="Last Name">
+    <input type="text" id="fullName" placeholder="Full Name">
+    <input type="email" id="email" placeholder="Email Address">
 
     <div id="controls">
       <button id="startBtn" class="start">Start Recording</button>
@@ -174,21 +176,21 @@
     };
 
     uploadBtn.onclick = async () => {
-      const firstName = document.getElementById("firstName").value.trim();
-      const lastName = document.getElementById("lastName").value.trim();
-      if (!firstName || !lastName) {
-        alert("Please enter your first and last name.");
+      const fullName = document.getElementById("fullName").value.trim();
+      const email = document.getElementById("email").value.trim();
+      if (!fullName || !email) {
+        alert("Please enter your full name and email address.");
         return;
       }
 
       const blob = new Blob(recordedChunks, { type: "video/webm" });
-      const fileName = `${firstName}_${lastName}_${Date.now()}.webm`;
+      const fileName = `${fullName.replace(/\s+/g, '_')}_${email}_${Date.now()}.webm`;
 
       loadingModal.style.display = "flex";
       status.textContent = "Uploading...";
 
       const { error } = await supabaseClient.storage
-        .from("video_cover_sheet") // Supabase bucket
+        .from("video_cover_sheet")
         .upload(fileName, blob, { contentType: "video/webm" });
 
       loadingModal.style.display = "none";
@@ -199,7 +201,6 @@
       } else {
         status.textContent = "✅ Video uploaded successfully!";
         afterRecording.style.display = "none";
-        // To allow re-recording after a successful upload
         startBtn.style.display = "inline-block";
       }
     };
