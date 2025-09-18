@@ -189,19 +189,41 @@
       loadingModal.style.display = "flex";
       status.textContent = "Uploading...";
 
-      const { error } = await supabaseClient.storage
+      // Step 1: Upload the video to Supabase Storage
+      const { data: storageData, error: storageError } = await supabaseClient.storage
         .from("video_cover_sheet")
         .upload(fileName, blob, { contentType: "video/webm" });
 
+      if (storageError) {
+        loadingModal.style.display = "none";
+        status.textContent = "❌ Upload failed. Please try again.";
+        console.error(storageError);
+        return;
+      }
+
+      // Step 2: Get the public URL of the uploaded video
+      const { data: { publicUrl } } = supabaseClient.storage
+        .from("video_cover_sheet")
+        .getPublicUrl(fileName);
+
+      // Step 3: Insert the user data and video URL into the database
+      const { error: dbError } = await supabaseClient
+        .from("video_submissions") // Make sure this table exists in your Supabase project
+        .insert([
+          { full_name: fullName, email: email, video_url: publicUrl },
+        ]);
+
       loadingModal.style.display = "none";
 
-      if (error) {
-        status.textContent = "❌ Upload failed. Please try again.";
-        console.error(error);
+      if (dbError) {
+        status.textContent = "❌ Database record failed to save. Video uploaded successfully, but contact support.";
+        console.error(dbError);
       } else {
-        status.textContent = "✅ Video uploaded successfully!";
+        status.textContent = "✅ Video and data uploaded successfully!";
         afterRecording.style.display = "none";
         startBtn.style.display = "inline-block";
+        document.getElementById("fullName").value = "";
+        document.getElementById("email").value = "";
       }
     };
   </script>
