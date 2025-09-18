@@ -20,14 +20,21 @@
       background: #fff;
       padding: 20px;
       border-radius: 12px;
-      max-width: 600px;
+      max-width: 700px;
       width: 100%;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
       text-align: center;
+      color: #d6336c;
+    }
+    .question {
+      font-weight: bold;
+      margin: 12px 0;
     }
     video {
       width: 100%;
-      max-width: 500px;
+      max-width: 600px;
       margin-top: 15px;
       border: 2px solid #ccc;
       border-radius: 8px;
@@ -68,8 +75,15 @@
 </head>
 <body>
   <div class="container">
-    <h2>Video Cover Sheet</h2>
-    <p>Please record your response (max 8 minutes).</p>
+    <h2>Candidate Video Submission</h2>
+
+    <div class="questions">
+      <div class="question">1. Please introduce yourself.</div>
+      <div class="question">2. Why are you interested in this role?</div>
+      <div class="question">3. What are your key strengths and skills?</div>
+      <div class="question">4. Do you have any final message for us?</div>
+    </div>
+
     <input type="text" id="name" placeholder="Enter your name" required />
     <input type="email" id="email" placeholder="Enter your email" required />
 
@@ -92,12 +106,13 @@
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
-      const SUPABASE_ANON_KEY = "YOUR_ANON_KEY"; // replace with your anon key
+      const SUPABASE_ANON_KEY = "YOUR_ANON_KEY"; // replace with your real key
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       const bucketName = "video_cover_sheet";
 
       let mediaRecorder;
       let recordedChunks = [];
+      let stream;
 
       const startBtn = document.getElementById("startBtn");
       const stopBtn = document.getElementById("stopBtn");
@@ -107,7 +122,7 @@
       const status = document.getElementById("status");
       const loading = document.getElementById("loading");
 
-      startBtn.addEventListener("click", async () => {
+      async function startRecording() {
         const name = document.getElementById("name").value.trim();
         const email = document.getElementById("email").value.trim();
         if (!name || !email) {
@@ -115,7 +130,15 @@
           return;
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // Reset preview
+        preview.srcObject = null;
+        preview.src = "";
+        preview.classList.add("hidden");
+        uploadBtn.classList.add("hidden");
+        retryBtn.classList.add("hidden");
+
+        // Request fresh camera stream each time
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         mediaRecorder = new MediaRecorder(stream);
         recordedChunks = [];
 
@@ -131,6 +154,9 @@
           preview.classList.remove("hidden");
           uploadBtn.classList.remove("hidden");
           retryBtn.classList.remove("hidden");
+
+          // Stop camera preview
+          stream.getTracks().forEach(track => track.stop());
         };
 
         mediaRecorder.start();
@@ -138,33 +164,25 @@
         startBtn.classList.add("hidden");
         stopBtn.classList.remove("hidden");
 
+        // Auto stop after 8 minutes
         setTimeout(() => {
           if (mediaRecorder && mediaRecorder.state === "recording") {
-            stopBtn.click();
+            stopRecording();
           }
-        }, 480000); // auto stop after 8 minutes
-      });
+        }, 480000);
+      }
 
-      stopBtn.addEventListener("click", () => {
-        mediaRecorder.stop();
-        status.textContent = "Recording stopped. Review your video below.";
-        stopBtn.classList.add("hidden");
-      });
+      function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+          status.textContent = "Recording stopped. Review your video below.";
+          stopBtn.classList.add("hidden");
+        }
+      }
 
-      retryBtn.addEventListener("click", () => {
-        preview.src = "";
-        preview.classList.add("hidden");
-        uploadBtn.classList.add("hidden");
-        retryBtn.classList.add("hidden");
-        startBtn.classList.remove("hidden");
-        status.textContent = "";
-      });
-
-      uploadBtn.addEventListener("click", async () => {
+      async function uploadVideo() {
         const name = document.getElementById("name").value.trim();
-        const email = document.getElementById("email").value.trim();
         const blob = new Blob(recordedChunks, { type: "video/webm" });
-
         const fileName = `${name}_${Date.now()}.webm`;
 
         loading.style.display = "flex";
@@ -182,7 +200,22 @@
           uploadBtn.classList.add("hidden");
           retryBtn.classList.add("hidden");
         }
-      });
+      }
+
+      function retryRecording() {
+        preview.src = "";
+        preview.classList.add("hidden");
+        uploadBtn.classList.add("hidden");
+        retryBtn.classList.add("hidden");
+        startBtn.classList.remove("hidden");
+        status.textContent = "";
+      }
+
+      // Event bindings
+      startBtn.addEventListener("click", startRecording);
+      stopBtn.addEventListener("click", stopRecording);
+      uploadBtn.addEventListener("click", uploadVideo);
+      retryBtn.addEventListener("click", retryRecording);
     });
   </script>
 </body>
