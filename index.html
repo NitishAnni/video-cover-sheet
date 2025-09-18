@@ -10,54 +10,77 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
     }
     .container {
       background: white;
-      padding: 20px;
+      padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      max-width: 700px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      max-width: 900px;
       width: 100%;
     }
     h2 {
       color: #d63384;
       text-align: center;
+      font-size: 28px;
+      margin-bottom: 20px;
     }
     .note {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: bold;
       color: #444;
       background: #fff3cd;
       border: 1px solid #ffeeba;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 25px;
     }
-    ol {
-      margin: 15px 0;
+    .question-list {
+      list-style-type: none;
+      padding: 0;
+    }
+    .question-list li {
+      margin-bottom: 20px;
+      background: #fafafa;
+      padding: 15px;
+      border-left: 4px solid #d63384;
+      border-radius: 6px;
     }
     video {
       width: 100%;
-      margin-top: 15px;
-      border-radius: 6px;
+      margin-top: 20px;
+      border-radius: 8px;
       background: black;
       display: none;
     }
     button {
-      margin: 8px 5px 0 0;
-      padding: 10px 16px;
+      margin-top: 15px;
+      padding: 12px 20px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 16px;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
     }
     .start { background: #007bff; color: white; }
+    .start:hover { background: #0056b3; }
     .stop { background: #dc3545; color: white; }
+    .stop:hover { background: #c82333; }
     .upload { background: #28a745; color: white; }
+    .upload:hover { background: #218838; }
     .re-record { background: #6c757d; color: white; }
-    #status { margin-top: 10px; font-size: 14px; color: #555; }
+    .re-record:hover { background: #5a6268; }
+    #status {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #555;
+      text-align: center;
+    }
 
     /* Loading modal */
     #loadingModal {
@@ -68,23 +91,25 @@
       background: rgba(0,0,0,0.5);
       justify-content: center;
       align-items: center;
+      z-index: 1000;
     }
     #loadingBox {
       background: white;
-      padding: 20px 30px;
-      border-radius: 8px;
+      padding: 30px 40px;
+      border-radius: 10px;
       text-align: center;
-      font-size: 16px;
+      font-size: 18px;
+      font-weight: bold;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-
+    
     input {
       width: 100%;
       box-sizing: border-box;
-      margin-top: 5px;
-      margin-bottom: 10px;
-      padding: 8px;
-      font-size: 14px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+      padding: 10px;
+      font-size: 16px;
       border-radius: 6px;
       border: 1px solid #ccc;
     }
@@ -96,12 +121,13 @@
     <div class="note">
       ⚠️ Recording must be <b>5–7 minutes</b> only. Please answer all the questions below.
     </div>
-    <ol>
-      <li>This role requires onsite presence on an as-needed basis, which could be three days a week or more. If you're a local candidate, please let us know if you're comfortable with this arrangement and tell us why? If you are from out-of-state, are you willing to relocate and tell us why?</li>
-      <li>Please describe your experience in category management, focusing on two key areas: (1) full-cycle or multi-step sourcing, and (2) stakeholder management.</li>
-      <li>What is the size of the spend you have managed, and how many years of experience do you have in specific categories? Have you specialized in a single category, or have you worked across multiple categories. We're particularly interested in candidates with deep expertise in focused categories. Please explain your answer in detail.</li>
-      <li>Please describe your experience in leadership and people management. What teams or functions have you led, and what was the scope of your responsibility?</li>
-    </ol>
+    
+    <ul class="question-list">
+      <li>**Question 1:** This role requires onsite presence on an as-needed basis, which could be three days a week or more. If you're a local candidate, please let us know if you're comfortable with this arrangement and tell us why? If you are from out-of-state, are you willing to relocate and tell us why?</li>
+      <li>**Question 2:** Please describe your experience in category management, focusing on two key areas: (1) full-cycle or multi-step sourcing, and (2) stakeholder management.</li>
+      <li>**Question 3:** What is the size of the spend you have managed, and how many years of experience do you have in specific categories? Have you specialized in a single category, or have you worked across multiple categories. We're particularly interested in candidates with deep expertise in focused categories. Please explain your answer in detail.</li>
+      <li>**Question 4:** Please describe your experience in leadership and people management. What teams or functions have you led, and what was the scope of your responsibility?</li>
+    </ul>
 
     <input type="text" id="fullName" placeholder="Full Name">
     <input type="email" id="email" placeholder="Email Address">
@@ -162,15 +188,25 @@
     stopBtn.onclick = () => {
       mediaRecorder.stop();
       stream.getTracks().forEach(track => track.stop());
+      
+      // Event listener for when recording stops
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        preview.srcObject = null;
+        preview.src = URL.createObjectURL(blob);
+        preview.controls = true; // Add playback controls for the user
+      };
 
       stopBtn.style.display = "none";
       afterRecording.style.display = "block";
-      status.textContent = "Recording stopped. You can re-record or upload your video.";
+      status.textContent = "Recording stopped. You can preview, re-record, or upload your video.";
     };
 
     reRecordBtn.onclick = () => {
       afterRecording.style.display = "none";
       preview.style.display = "none";
+      preview.src = ""; // Clear the video source
+      preview.controls = false;
       startBtn.style.display = "inline-block";
       status.textContent = "You can re-record now.";
     };
@@ -224,6 +260,8 @@
         startBtn.style.display = "inline-block";
         document.getElementById("fullName").value = "";
         document.getElementById("email").value = "";
+        preview.src = "";
+        preview.controls = false;
       }
     };
   </script>
