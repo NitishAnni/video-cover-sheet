@@ -1,222 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Video Cover Sheet</title>
+  <meta charset="UTF-8">
+  <title>Candidate Video Submission</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
-      background: #f4f4f4;
-    }
-    .container {
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 700px;
-      width: 100%;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    h2 {
-      text-align: center;
-      color: #d6336c;
-    }
-    .question {
-      font-weight: bold;
-      margin: 12px 0;
-    }
-    video {
-      width: 100%;
-      max-width: 600px;
-      margin-top: 15px;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-    }
-    button {
-      margin: 10px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-      background-color: #007bff;
-      color: #fff;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .hidden {
-      display: none;
-    }
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.6);
+      background: #f5f5f5;
       display: flex;
       justify-content: center;
       align-items: center;
-      color: white;
-      font-size: 20px;
-      z-index: 1000;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 700px;
+      width: 100%;
+    }
+    h2 {
+      color: #d63384;
+      text-align: center;
+    }
+    .note {
+      font-size: 14px;
+      font-weight: bold;
+      color: #444;
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+    ol {
+      margin: 15px 0;
+    }
+    video {
+      width: 100%;
+      margin-top: 15px;
+      border-radius: 6px;
+      background: black;
+    }
+    button {
+      margin: 8px 5px 0 0;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .start { background: #007bff; color: white; }
+    .stop { background: #dc3545; color: white; }
+    .upload { background: #28a745; color: white; }
+    .re-record { background: #6c757d; color: white; }
+    #status { margin-top: 10px; font-size: 14px; color: #555; }
+
+    /* Loading modal */
+    #loadingModal {
       display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex; justify-content: center; align-items: center;
+    }
+    #loadingBox {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    input {
+      width: calc(50% - 10px);
+      margin: 5px;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Candidate Video Submission</h2>
+    <div class="note">
+      ⚠️ Recording must be <b>5–7 minutes</b> only. Please answer all the questions below.
+    </div>
+    <ol>
+      <li>This role requires onsite presence... Are you comfortable? If out-of-state, willing to relocate?</li>
+      <li>Describe your experience in category management (sourcing + stakeholder mgmt).</li>
+      <li>What is the size of spend you managed? Years of exp in categories? Specialized or multiple?</li>
+      <li>Describe your leadership & people management experience (teams/functions led).</li>
+    </ol>
 
-    <div class="questions">
-      <div class="question">1. Please introduce yourself.</div>
-      <div class="question">2. Why are you interested in this role?</div>
-      <div class="question">3. What are your key strengths and skills?</div>
-      <div class="question">4. Do you have any final message for us?</div>
+    <input type="text" id="firstName" placeholder="First Name">
+    <input type="text" id="lastName" placeholder="Last Name">
+
+    <div id="controls">
+      <button id="startBtn" class="start">Start Recording</button>
+      <button id="stopBtn" class="stop" style="display:none;">Stop Recording</button>
     </div>
 
-    <input type="text" id="name" placeholder="Enter your name" required />
-    <input type="email" id="email" placeholder="Enter your email" required />
+    <video id="preview" autoplay muted></video>
 
-    <div>
-      <button id="startBtn">Start Recording</button>
-      <button id="stopBtn" class="hidden">Stop Recording</button>
-      <button id="uploadBtn" class="hidden">Upload</button>
-      <button id="retryBtn" class="hidden">Re-record</button>
+    <div id="afterRecording" style="display:none;">
+      <button id="reRecordBtn" class="re-record">Re-record</button>
+      <button id="uploadBtn" class="upload">Upload</button>
     </div>
 
-    <video id="preview" controls class="hidden"></video>
     <p id="status"></p>
   </div>
 
-  <div id="loading" class="loading-overlay">
-    Uploading your video, please wait...
+  <!-- Loading Modal -->
+  <div id="loadingModal">
+    <div id="loadingBox">Uploading video, please wait...</div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const SUPABASE_URL = "https://rxwdqmfeeknxshbydsne.supabase.co";
-      const SUPABASE_ANON_KEY = "YOUR_ANON_KEY"; // replace with your real key
-      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      const bucketName = "video_cover_sheet";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(
+      "https://rxwdqmfeeknxshbydsne.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4d2RxbWZlZWtueHNoYnlkc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDMyNTksImV4cCI6MjA3MzcxOTI1OX0.sP8DJzwLrC4tJ8JJjVhBUKitVsXsiNFYnsj0jLdlD2U"
+    );
 
-      let mediaRecorder;
-      let recordedChunks = [];
-      let stream;
+    let mediaRecorder, recordedChunks = [], stream;
 
-      const startBtn = document.getElementById("startBtn");
-      const stopBtn = document.getElementById("stopBtn");
-      const uploadBtn = document.getElementById("uploadBtn");
-      const retryBtn = document.getElementById("retryBtn");
-      const preview = document.getElementById("preview");
-      const status = document.getElementById("status");
-      const loading = document.getElementById("loading");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const reRecordBtn = document.getElementById("reRecordBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const preview = document.getElementById("preview");
+    const afterRecording = document.getElementById("afterRecording");
+    const status = document.getElementById("status");
+    const loadingModal = document.getElementById("loadingModal");
 
-      async function startRecording() {
-        const name = document.getElementById("name").value.trim();
-        const email = document.getElementById("email").value.trim();
-        if (!name || !email) {
-          alert("Please enter your name and email before recording.");
-          return;
-        }
+    startBtn.onclick = async () => {
+      recordedChunks = [];
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      preview.srcObject = stream;
+      preview.style.display = "block";
 
-        // Reset preview
-        preview.srcObject = null;
-        preview.src = "";
-        preview.classList.add("hidden");
-        uploadBtn.classList.add("hidden");
-        retryBtn.classList.add("hidden");
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.start();
 
-        // Request fresh camera stream each time
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        recordedChunks = [];
+      startBtn.style.display = "none";
+      stopBtn.style.display = "inline-block";
+      status.textContent = "Recording in progress...";
+    };
 
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            recordedChunks.push(event.data);
-          }
-        };
+    stopBtn.onclick = () => {
+      mediaRecorder.stop();
+      stream.getTracks().forEach(track => track.stop());
 
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunks, { type: "video/webm" });
-          preview.src = URL.createObjectURL(blob);
-          preview.classList.remove("hidden");
-          uploadBtn.classList.remove("hidden");
-          retryBtn.classList.remove("hidden");
+      preview.style.display = "none"; // Hide live preview after recording
 
-          // Stop camera preview
-          stream.getTracks().forEach(track => track.stop());
-        };
+      stopBtn.style.display = "none";
+      afterRecording.style.display = "block";
+      status.textContent = "Recording stopped. You can upload your video.";
+    };
 
-        mediaRecorder.start();
-        status.textContent = "Recording in progress...";
-        startBtn.classList.add("hidden");
-        stopBtn.classList.remove("hidden");
+    reRecordBtn.onclick = () => {
+      afterRecording.style.display = "none";
+      preview.style.display = "block";
+      startBtn.style.display = "inline-block";
+      status.textContent = "You can re-record now.";
+    };
 
-        // Auto stop after 8 minutes
-        setTimeout(() => {
-          if (mediaRecorder && mediaRecorder.state === "recording") {
-            stopRecording();
-          }
-        }, 480000);
+    uploadBtn.onclick = async () => {
+      const firstName = document.getElementById("firstName").value.trim();
+      const lastName = document.getElementById("lastName").value.trim();
+      if (!firstName || !lastName) {
+        alert("Please enter your first and last name.");
+        return;
       }
 
-      function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-          status.textContent = "Recording stopped. Review your video below.";
-          stopBtn.classList.add("hidden");
-        }
+      const blob = new Blob(recordedChunks, { type: "video/webm" });
+      const fileName = `${firstName}_${lastName}_${Date.now()}.webm`;
+
+      loadingModal.style.display = "flex";
+      status.textContent = "";
+
+      const { error } = await supabaseClient.storage
+        .from("video_cover_sheet") // Supabase bucket
+        .upload(fileName, blob, { contentType: "video/webm" });
+
+      loadingModal.style.display = "none";
+
+      if (error) {
+        status.textContent = "❌ Upload failed. Please try again.";
+        console.error(error);
+      } else {
+        status.textContent = "✅ Video uploaded successfully!";
+        afterRecording.style.display = "none";
       }
-
-      async function uploadVideo() {
-        const name = document.getElementById("name").value.trim();
-        const blob = new Blob(recordedChunks, { type: "video/webm" });
-        const fileName = `${name}_${Date.now()}.webm`;
-
-        loading.style.display = "flex";
-        status.textContent = "";
-
-        let { data, error } = await supabase.storage.from(bucketName).upload(fileName, blob);
-
-        loading.style.display = "none";
-
-        if (error) {
-          status.textContent = "Upload failed. Please try again.";
-          console.error(error);
-        } else {
-          status.textContent = "Upload successful!";
-          uploadBtn.classList.add("hidden");
-          retryBtn.classList.add("hidden");
-        }
-      }
-
-      function retryRecording() {
-        preview.src = "";
-        preview.classList.add("hidden");
-        uploadBtn.classList.add("hidden");
-        retryBtn.classList.add("hidden");
-        startBtn.classList.remove("hidden");
-        status.textContent = "";
-      }
-
-      // Event bindings
-      startBtn.addEventListener("click", startRecording);
-      stopBtn.addEventListener("click", stopRecording);
-      uploadBtn.addEventListener("click", uploadVideo);
-      retryBtn.addEventListener("click", retryRecording);
-    });
+    };
   </script>
 </body>
 </html>
